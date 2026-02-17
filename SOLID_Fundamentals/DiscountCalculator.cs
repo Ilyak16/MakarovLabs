@@ -79,6 +79,7 @@
     {
         private readonly Dictionary<string, IDiscountStrategy> _discountStrategies;
         private readonly Dictionary<string, IShippingStrategy> _shippingStrategies;
+        
         public DiscountCalculator()
         {
             _discountStrategies = new IDiscountStrategy[]
@@ -98,6 +99,7 @@
                 new InternationalShipping()
             }.ToDictionary(s => s.ShippingMethod);
         }
+        
         public decimal CalculateDiscount(string customerType, decimal orderAmount)
         {
             return _discountStrategies.TryGetValue(customerType, out var strategy)
@@ -110,6 +112,48 @@
             return _shippingStrategies.TryGetValue(shippingMethod, out var strategy)
                 ? strategy.CalculateShippingCost(weight, destination)
                 : 0;
+        }
+        
+        // МЕТОДЫ ДЛЯ РАСШИРЕНИЯ (ДОБАВЛЕНЫ)
+        public void AddDiscountStrategy(IDiscountStrategy strategy)
+        {
+            if (_discountStrategies.ContainsKey(strategy.CustomerType))
+            {
+                // Можно либо обновить, либо выбросить исключение
+                Console.WriteLine($"Стратегия для {strategy.CustomerType} обновлена");
+            }
+            _discountStrategies[strategy.CustomerType] = strategy;
+        }
+
+        public void AddShippingStrategy(IShippingStrategy strategy)
+        {
+            if (_shippingStrategies.ContainsKey(strategy.ShippingMethod))
+            {
+                Console.WriteLine($"Стратегия доставки для {strategy.ShippingMethod} обновлена");
+            }
+            _shippingStrategies[strategy.ShippingMethod] = strategy;
+        }
+
+        // Дополнительно: метод для удаления (опционально)
+        public bool RemoveDiscountStrategy(string customerType)
+        {
+            return _discountStrategies.Remove(customerType);
+        }
+
+        public bool RemoveShippingStrategy(string shippingMethod)
+        {
+            return _shippingStrategies.Remove(shippingMethod);
+        }
+
+        // Получение списка доступных стратегий (опционально)
+        public IEnumerable<string> GetAvailableDiscountTypes()
+        {
+            return _discountStrategies.Keys.ToList();
+        }
+
+        public IEnumerable<string> GetAvailableShippingMethods()
+        {
+            return _shippingStrategies.Keys.ToList();
         }
     }
 }
