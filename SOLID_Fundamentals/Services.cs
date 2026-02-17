@@ -1,8 +1,15 @@
 ﻿namespace SOLID_Fundamentals //DIP
 {
-    using System;
+    public interface IEmailService
+    {
+        void SendEmail(string to, string subject, string body);
+    }
 
-    public class EmailService
+    public interface ISmsService
+    {
+        void SendSms(string phoneNumber, string message);
+    }
+    public class EmailService : IEmailService
     {
         public void SendEmail(string to, string subject, string body)
         {
@@ -10,7 +17,7 @@
         }
     }
 
-    public class SmsService
+    public class SmsService : ISmsService
     {
         public void SendSms(string phoneNumber, string message)
         {
@@ -20,29 +27,32 @@
 
     public class OrderService
     {
-        private EmailService _emailService;
-        private SmsService _smsService;
+        private readonly IEmailService _emailService;
+        private readonly ISmsService _smsService;
 
-        public OrderService()
+        public OrderService(IEmailService emailService, ISmsService smsService)
         {
-            _emailService = new EmailService();
-            _smsService = new SmsService();
+            _emailService = emailService;
+            _smsService = smsService;
         }
 
         public void PlaceOrder(Order order)
         {
-            _emailService.SendEmail(order.CustomerEmail, "Order Confirmation", "Your order has been placed");
-            _smsService.SendSms(order.CustomerPhone, "Your order has been placed");
+            _emailService.SendEmail(order.CustomerEmail, "Order Confirmation",
+                "Your order has been placed");
+
+            if (!string.IsNullOrEmpty(order.CustomerPhone))
+                _smsService.SendSms(order.CustomerPhone, "Your order has been placed");
         }
     }
 
     public class NotificationService
     {
-        private EmailService _emailService;
+        private readonly IEmailService _emailService;
 
-        public NotificationService()
+        public NotificationService(IEmailService emailService)
         {
-            _emailService = new EmailService();
+            _emailService = emailService;
         }
 
         public void SendPromotion(string email, string promotion)

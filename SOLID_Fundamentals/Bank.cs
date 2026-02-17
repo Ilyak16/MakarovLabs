@@ -7,14 +7,17 @@ namespace SOLID_Fundamentals //LSP
         void Withdraw(decimal amount);
         bool CanWithdraw(decimal amount);
     }
+
     public interface IDepositable
     {
         void Deposit(decimal amount);
     }
+
     public interface ITransferable : IWithdrawable, IDepositable
     {
         decimal Balance { get; }
     }
+
     public abstract class Account : ITransferable
     {
         public decimal Balance { get; protected set; }
@@ -25,12 +28,12 @@ namespace SOLID_Fundamentals //LSP
         }
 
         public abstract void Withdraw(decimal amount);
+
         public virtual bool CanWithdraw(decimal amount)
         {
-            if (amount <= Balance)
-            return true;
-            else return false;
+            return amount <= Balance;
         }
+
         public virtual decimal CalculateInterest()
         {
             return Balance * 0.01m;
@@ -40,10 +43,12 @@ namespace SOLID_Fundamentals //LSP
     public class SavingsAccount : Account
     {
         public decimal MinimumBalance { get; } = 100m;
+
         public override bool CanWithdraw(decimal amount)
         {
             return Balance - amount >= MinimumBalance;
         }
+
         public override void Withdraw(decimal amount)
         {
             if (!CanWithdraw(amount))
@@ -58,9 +63,14 @@ namespace SOLID_Fundamentals //LSP
     {
         public decimal OverdraftLimit { get; } = 500m;
 
+        public override bool CanWithdraw(decimal amount)
+        {
+            return Balance - amount >= -OverdraftLimit;
+        }
+
         public override void Withdraw(decimal amount)
         {
-            if (Balance - amount < -OverdraftLimit)
+            if (!CanWithdraw(amount))
             {
                 throw new InvalidOperationException("Overdraft limit exceeded");
             }
@@ -77,18 +87,24 @@ namespace SOLID_Fundamentals //LSP
             MaturityDate = maturityDate;
         }
 
-        public override void Withdraw(decimal amount)
+        public override bool CanWithdraw(decimal amount)
         {
             if (DateTime.Now < MaturityDate)
             {
-                throw new InvalidOperationException("Cannot withdraw before maturity date");
+                return false;
             }
+            return amount <= Balance;
+        }
 
-            if (amount > Balance)
+        public override void Withdraw(decimal amount)
+        {
+            if (!CanWithdraw(amount))
             {
-                throw new InvalidOperationException("Insufficient funds");
+                throw new InvalidOperationException(
+                    DateTime.Now < MaturityDate
+                        ? "Cannot withdraw before maturity date"
+                        : "Insufficient funds");
             }
-
             Balance -= amount;
         }
 
@@ -98,9 +114,67 @@ namespace SOLID_Fundamentals //LSP
         }
     }
 
+    public interface ITransferService
+    {
+        bool TryTransfer(ITransferable from, ITransferable to, decimal amount);
+        void Transfer(ITransferable from, ITransferable to, decimal amount);
+    }
+
+    public class BankTransferService : ITransferService
+    {
+        public bool TryTransfer(ITransferable from, ITransferable to, decimal amount)
+        {
+            if (!from.CanWithdraw(amount))
+            {
+                return false;
+            }
+
+            try
+            {
+                TransferInternal(from, to, amount);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public void Transfer(ITransferable from, ITransferable to, decimal amount)
+        {
+            if (!from.CanWithdraw(amount))
+            {
+                throw new InvalidOperationException($"Cannot withdraw {amount} from source account");
+            }
+
+            TransferInternal(from, to, amount);
+        }
+
+        private void TransferInternal(ITransferable from, ITransferable to, decimal amount)
+        {
+            from.Withdraw(amount);
+            try
+            {
+                to.Deposit(amount);
+            }
+            catch
+            {
+                from.Deposit(amount);
+                throw;
+            }
+        }
+    }
+
     public class Bank
     {
-        public void ProcessWithdrawal(Account account, decimal amount)
+        private readonly ITransferService _transferService;
+
+        public Bank(ITransferService transferService = null)
+        {
+            _transferService = transferService ?? new BankTransferService();
+        }
+
+        public void ProcessWithdrawal(IWithdrawable account, decimal amount)
         {
             try
             {
@@ -113,22 +187,26 @@ namespace SOLID_Fundamentals //LSP
             }
         }
 
-        public void Transfer(IWithdraw from, Account to, decimal amount)
+        public void Transfer(ITransferable from, ITransferable to, decimal amount)
         {
-            if (!from.CanWithdraw(amount)) 
-            { 
-                Console.WriteLine("Transfer failed");
-            }
             try
             {
-                from.Withdraw(amount);
-                to.Deposit(amount);
-                Console.WriteLine("Successfully transferred");
+                _transferService.Transfer(from, to, amount);
+                Console.WriteLine($"Successfully transferred {amount} from account to account");
             }
-            catch
+            catch (InvalidOperationException ex)
             {
-                Console.WriteLine("Transfer failed: insufficient funds");
+                Console.WriteLine($"Transfer failed: {ex.Message}");
             }
+        }
+
+        public bool TryTransfer(ITransferable from, ITransferable to, decimal amount)
+        {
+            bool success = _transferService.TryTransfer(from, to, amount);
+            Console.WriteLine(success
+                ? $"Successfully transferred {amount} from account to account"
+                : "Transfer failed");
+            return success;
         }
     }
 }

@@ -2,56 +2,113 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SOLID_Fundamentals // SRP
+namespace SOLID_Fundamentals
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-
-    public class OrderProcessor
+    public class OrderRepository
     {
-        private List<Order> orders = new List<Order>();
+        private List<Order> _orders = new();
 
         public void AddOrder(Order order)
         {
-            orders.Add(order);
+            _orders.Add(order);
             Console.WriteLine($"Order {order.Id} added");
         }
 
-        public void ProcessOrder(int orderId)
+        public Order GetOrder(int orderId) => _orders.FirstOrDefault(o => o.Id == orderId);
+        public List<Order> GetAllOrders() => _orders;
+    }
+
+    public class PaymentProcessor
+    {
+        public void ProcessPayment(string paymentMethod, decimal amount)
         {
-            var order = orders.FirstOrDefault(o => o.Id == orderId);
-            if (order != null)
-            {
-                Console.WriteLine($"Processing order {orderId}");
-
-                if (order.TotalAmount <= 0)
-                    throw new Exception("Invalid order amount");
-
-                ProcessPayment(order.PaymentMethod, order.TotalAmount);
-                UpdateInventory(order.Items);
-                SendEmail(order.CustomerEmail, $"Order {orderId} processed");
-                LogToDatabase($"Order {orderId} processed at {DateTime.Now}");
-                GenerateReceipt(order);
-            }
+            if (amount <= 0)
+                throw new Exception("Invalid order amount");
+            Console.WriteLine($"Processing {paymentMethod} payment of {amount}");
         }
+    }
 
-        public void GenerateMonthlyReport()
+    public class InventoryManager
+    {
+        public void UpdateInventory(List<string> items)
+        {
+            Console.WriteLine("Inventory updated");
+        }
+    }
+
+    public class EmailSender
+    {
+        public void SendEmail(string to, string message)
+        {
+            Console.WriteLine($"Email to {to}: {message}");
+        }
+    }
+
+    public class Logger
+    {
+        public void Log(string message)
+        {
+            Console.WriteLine($"[LOG] {message}");
+        }
+    }
+
+    public class ReceiptGenerator
+    {
+        public void GenerateReceipt(Order order)
+        {
+            Console.WriteLine($"Receipt generated for order {order.Id}");
+        }
+    }
+
+    public class ReportGenerator
+    {
+        public void GenerateMonthlyReport(List<Order> orders)
         {
             decimal totalRevenue = orders.Sum(o => o.TotalAmount);
             int totalOrders = orders.Count;
             Console.WriteLine($"Monthly Report: {totalOrders} orders, Revenue: {totalRevenue:C}");
         }
 
-        public void ExportToExcel(string filePath)
+        public void ExportToExcel(string filePath, List<Order> orders)
         {
-            Console.WriteLine($"Exporting orders to {filePath}");
+            Console.WriteLine($"Exporting {orders.Count} orders to {filePath}");
+        }
+    }
+    public class OrderProcessor
+    {
+        private readonly OrderRepository _repository = new();
+        private readonly PaymentProcessor _payment = new();
+        private readonly InventoryManager _inventory = new();
+        private readonly EmailSender _email = new();
+        private readonly Logger _logger = new();
+        private readonly ReceiptGenerator _receipt = new();
+        private readonly ReportGenerator _report = new();
+
+        public void AddOrder(Order order)
+        {
+            _repository.AddOrder(order);
         }
 
-        private void ProcessPayment(string paymentMethod, decimal amount) { }
-        private void UpdateInventory(List<string> items) { }
-        private void SendEmail(string to, string message) { }
-        private void LogToDatabase(string message) { }
-        private void GenerateReceipt(Order order) { }
+        public void ProcessOrder(int orderId)
+        {
+            var order = _repository.GetOrder(orderId);
+            if (order == null) return;
+
+            _payment.ProcessPayment(order.PaymentMethod, order.TotalAmount);
+            _inventory.UpdateInventory(order.Items);
+            _email.SendEmail(order.CustomerEmail, $"Order {orderId} processed");
+            _logger.Log($"Order {orderId} processed at {DateTime.Now}");
+            _receipt.GenerateReceipt(order);
+        }
+
+        public void GenerateMonthlyReport()
+        {
+            _report.GenerateMonthlyReport(_repository.GetAllOrders());
+        }
+
+        public void ExportToExcel(string filePath)
+        {
+            _report.ExportToExcel(filePath, _repository.GetAllOrders());
+        }
     }
 }
