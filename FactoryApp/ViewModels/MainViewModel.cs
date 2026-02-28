@@ -1,4 +1,5 @@
 ﻿using FactoryApp.Class;
+using FactoryApp.Interface;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Media;
@@ -8,42 +9,43 @@ namespace FactoryApp.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private ObservableCollection<Shape> _shapes = new();
+        private IShapeFactory _currentFactory;
         private string _selectedTheme;
+        private ObservableCollection<Shape> _shapes = new();
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private readonly List<ShapeCreator> _creators = new()
+        public ObservableCollection<string> Themes { get; }
+
+        public MainViewModel()
         {
-            new CircleCreator(),
-            new SquareCreator(),
-            new TriangleCreator()
-        };
-        public ObservableCollection<string> Themes { get; } =
-            new() { "Красный", "Синий", "Зелёный" };
+            Themes = new ObservableCollection<string> { "Красный", "Синий", "Зелёный" };
+            SelectedTheme = Themes[0];
+        }
 
         public string SelectedTheme
         {
             get => _selectedTheme;
             set
             {
-                _selectedTheme = value;
-                UpdateShapes();
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedTheme)));
+                if (_selectedTheme != value)
+                {
+                    _selectedTheme = value;
+                    _currentFactory = ShapeFactoryProvider.GetFactory(_selectedTheme);
+                    UpdateShapes();
+                    OnPropertyChanged(nameof(SelectedTheme));
+                }
             }
         }
+
         public ObservableCollection<Shape> Shapes
         {
             get => _shapes;
             set
             {
                 _shapes = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Shapes)));
+                OnPropertyChanged(nameof(Shapes));
             }
-        }
-        public MainViewModel()
-        {
-            SelectedTheme = Themes.First();
         }
 
         private Brush GetBrush()
@@ -59,14 +61,17 @@ namespace FactoryApp.ViewModels
 
         private void UpdateShapes()
         {
-            var newShapes = new ObservableCollection<Shape>();
-
-            foreach (var creator in _creators)
+            var newShapes = new ObservableCollection<Shape>
             {
-                newShapes.Add(creator.DrawShape(80, GetBrush()));
-            }
+                _currentFactory.CreateCircle().Draw(80, GetBrush()),
+                _currentFactory.CreateSquare().Draw(80, GetBrush()),
+                _currentFactory.CreateTriangle().Draw(80, GetBrush())
+            };
 
             Shapes = newShapes;
         }
+
+        protected void OnPropertyChanged(string propertyName)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
