@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SOLID_Fundamentals", "..\SO
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FactoryApp", "..\FactoryApp\FactoryApp.csproj", "{56326431-E629-D2C1-10F8-8050A6745746}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab_3(GoF)", "G:\Makarov Labs\Lab_3(GoF)\Lab_3(GoF)\Lab_3(GoF).csproj", "{1924D6D4-91CB-7FB0-193A-31A67EC6E3BC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{56326431-E629-D2C1-10F8-8050A6745746}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56326431-E629-D2C1-10F8-8050A6745746}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56326431-E629-D2C1-10F8-8050A6745746}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1924D6D4-91CB-7FB0-193A-31A67EC6E3BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1924D6D4-91CB-7FB0-193A-31A67EC6E3BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1924D6D4-91CB-7FB0-193A-31A67EC6E3BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1924D6D4-91CB-7FB0-193A-31A67EC6E3BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
