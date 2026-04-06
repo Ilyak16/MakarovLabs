@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36429.23 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monitoring_Imitation", "Monitoring_Imitation.csproj", "{B9D5319B-FAE7-40B6-B97C-83750FEAE6C6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B9D5319B-FAE7-40B6-B97C-83750FEAE6C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9D5319B-FAE7-40B6-B97C-83750FEAE6C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9D5319B-FAE7-40B6-B97C-83750FEAE6C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9D5319B-FAE7-40B6-B97C-83750FEAE6C6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C2221EAC-1149-473E-A882-C6ADA20FEB0B}
+	EndGlobalSection
+EndGlobal
