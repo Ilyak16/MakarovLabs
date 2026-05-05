@@ -32,8 +32,12 @@ namespace Document_Lab7.Mediator
             switch (ev)
             {
                 case "Enqueued":
-                    _logger.Log($"Документ '{document.Title}' добавлен в очередь.");
-                    if (!_isProcessing) ProcessQueue();
+                    if (document != null)
+                    {
+                        _logger.Log($"Документ '{document.Title}' добавлен в очередь.");
+                        //if (!_isProcessing) ProcessQueue();
+                    }
+                    //if (!_isProcessing) ProcessQueue();
                     break;
 
                 case "RequestPrint":
@@ -44,7 +48,6 @@ namespace Document_Lab7.Mediator
                 case "PrintSuccess":
                     document.CompletePrinting();
                     _logger.Log($"✅ Документ '{document.Title}' успешно напечатан.");
-                    ProcessQueue();
                     break;
 
                 case "PrintFailed":
@@ -66,15 +69,19 @@ namespace Document_Lab7.Mediator
 
         private void ProcessQueue()
         {
-            if (_queue.IsEmpty)
+            // Итеративная обработка вместо рекурсии
+            while (!_queue.IsEmpty)
             {
-                _queue.NotifyQueueEmpty();
-                return;
+                _isProcessing = true;
+                var doc = _queue.Dequeue();
+                if (doc != null)
+                {
+                    doc.Print(); // Это вызовет RequestPrint → StartPrint → PrintSuccess
+                }
             }
 
-            _isProcessing = true;
-            var doc = _queue.Dequeue();
-            doc.Print();
+            // Когда очередь пуста
+            _queue.NotifyQueueEmpty();
         }
     }
 }

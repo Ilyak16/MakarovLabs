@@ -13,6 +13,9 @@ namespace Document_Lab7.States
     {
         public void Print(AppDoc document)
         {
+            document.SetState(new PrintingState());
+            System.Console.WriteLine("[FSM: New -> Printing] Начало печати...");
+
             document.Mediator?.Notify(document, "RequestPrint", document);
         }
 

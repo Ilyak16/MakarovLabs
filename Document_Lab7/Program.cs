@@ -35,7 +35,7 @@ namespace Document_Lab7
             dispatcher.CommandAddToQueue(doc1);
             dispatcher.CommandAddToQueue(doc2);
             dispatcher.CommandAddToQueue(doc3);
-
+            mediator.Notify(null, "ProcessQueue");
             // 5. Демонстрация: попытка нарушить правила состояний
             System.Console.WriteLine("\n🚫 Этап 2: Попытка некорректных операций");
             doc1.Print(); // OK: New -> RequestPrint
