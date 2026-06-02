@@ -1,8 +1,10 @@
 ﻿using PhoneBookDB.Models;
+using PhoneBookDB.Views;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,20 +15,6 @@ namespace PhoneBookDB.ViewModels
         private readonly PhoneBookDbKupriyanov2307a1Context _context;
         public ObservableCollection<Contact> Contacts { get; set; }
 
-        private string _name = string.Empty;
-        public string Name
-        {
-            get => _name;
-            set => Set(ref _name, value);
-        }
-
-        private string _phone = string.Empty;
-        public string Phone
-        {
-            get => _phone;
-            set => Set(ref _phone, value);
-        }
-
         private Contact? _selectedContact;
         public Contact? SelectedContact
         {
@@ -35,19 +23,22 @@ namespace PhoneBookDB.ViewModels
         }
 
         public ICommand AddCommand { get; }
+        public ICommand EditCommand { get; }
         public ICommand DeleteCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand NormalizeAllCommand { get; }
 
         public MainViewModel(PhoneBookDbKupriyanov2307a1Context context)
         {
             _context = context;
             Contacts = new ObservableCollection<Contact>();
 
-            AddCommand = new RelayCommand(AddContact, CanAddContact);
+            AddCommand = new RelayCommand(OpenAddContactWindow, () => true);
+            EditCommand = new RelayCommand(OpenEditContactWindow, CanEditContact);
             DeleteCommand = new RelayCommand(DeleteContact, CanDeleteContact);
-            RefreshCommand = new RelayCommand(async () => await LoadContactsAsync(), () => true);
+            RefreshCommand = new RelayCommand(() => Task.Run(async () => await LoadContactsAsync()), () => true);
+            NormalizeAllCommand = new RelayCommand(async () => await NormalizeAllPhonesAsync(), () => true);
 
-            // Загрузка данных при создании ViewModel
             Task.Run(async () => await LoadContactsAsync());
         }
 
@@ -57,71 +48,128 @@ namespace PhoneBookDB.ViewModels
             {
                 var contacts = await _context.Contacts.ToListAsync();
 
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.Invoke(() =>
                 {
                     Contacts.Clear();
                     foreach (var contact in contacts)
-                    {
                         Contacts.Add(contact);
-                    }
                 });
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Ошибка загрузки данных: {ex.Message}");
+                MessageBox.Show($"❌ Ошибка загрузки: {ex.Message}", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private async void AddContact()
+        private void OpenAddContactWindow()
         {
-            try
-            {
-                var contact = new Contact(Name, Phone);
-                _context.Contacts.Add(contact);
-                await _context.SaveChangesAsync();
-
-                Contacts.Add(contact);
-
-                Name = string.Empty;
-                Phone = string.Empty;
-            }
-            catch (ArgumentException ex)
-            {
-                System.Windows.MessageBox.Show($"Ошибка валидации: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Ошибка добавления: {ex.Message}");
-            }
+            var viewModel = new ContactEditViewModel(_context, onContactSaved: RefreshContacts);
+            var window = new ContactEditWindow(viewModel);
+            window.ShowDialog();
         }
 
-        private bool CanAddContact()
+        private void OpenEditContactWindow()
         {
-            return !string.IsNullOrWhiteSpace(Name)
-                && !string.IsNullOrWhiteSpace(Phone);
+            if (SelectedContact == null)
+            {
+                MessageBox.Show("Выберите контакт для редактирования", "Внимание",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var viewModel = new ContactEditViewModel(_context, SelectedContact, RefreshContacts);
+            var window = new ContactEditWindow(viewModel);
+            window.ShowDialog();
         }
 
         private async void DeleteContact()
         {
-            if (SelectedContact != null)
+            if (SelectedContact == null)
             {
-                try
-                {
-                    _context.Contacts.Remove(SelectedContact);
-                    await _context.SaveChangesAsync();
+                MessageBox.Show("Выберите контакт для удаления", "Внимание",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-                    Contacts.Remove(SelectedContact);
-                }
-                catch (Exception ex)
+            var result = MessageBox.Show(
+                $"Удалить контакт \"{SelectedContact.Name}\"?",
+                "Подтверждение",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                var contactToDelete = SelectedContact;
+
+                _context.Contacts.Remove(contactToDelete);
+                await _context.SaveChangesAsync();
+
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    System.Windows.MessageBox.Show($"Ошибка удаления: {ex.Message}");
-                }
+                    Contacts.Remove(contactToDelete);
+                    SelectedContact = null;
+                });
+
+                MessageBox.Show("✅ Контакт удалён!", "Успех",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ Ошибка удаления: {ex.Message}",
+                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private bool CanDeleteContact()
+        /// <summary>
+        /// Нормализует все телефоны в базе данных до единого формата
+        /// </summary>
+        private async Task NormalizeAllPhonesAsync()
         {
-            return SelectedContact != null;
+            try
+            {
+                var contacts = await _context.Contacts.ToListAsync();
+                int updated = 0;
+
+                foreach (var contact in contacts)
+                {
+                    string normalized = Contact.NormalizePhone(contact.Phone);
+
+                    if (contact.Phone != normalized)
+                    {
+                        contact.Phone = normalized;
+                        updated++;
+                    }
+                }
+
+                if (updated > 0)
+                {
+                    await _context.SaveChangesAsync();
+                    MessageBox.Show($"✅ Обновлено номеров: {updated}", "Нормализация",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    await LoadContactsAsync();
+                }
+                else
+                {
+                    MessageBox.Show("️ Все номера уже в едином формате", "Нормализация",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"❌ Ошибка: {ex.Message}", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
+
+        private void RefreshContacts()
+        {
+            Task.Run(async () => await LoadContactsAsync());
+        }
+
+        private bool CanEditContact() => SelectedContact != null;
+        private bool CanDeleteContact() => SelectedContact != null;
     }
 }

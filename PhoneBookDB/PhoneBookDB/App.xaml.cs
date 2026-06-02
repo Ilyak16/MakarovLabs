@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PhoneBookDB.ViewModels;
+using PhoneBookDB.Views;
 using System.Configuration;
 using System.Data;
 using System.Windows;
@@ -23,8 +24,9 @@ namespace PhoneBookDB
                 options.UseSqlServer("Data Source=DBSrv\\gor2025;Initial Catalog=PhoneBookDB_Kupriyanov_2307a1;Integrated Security=True;Encrypt=True;Trust Server Certificate=True"));
 
             services.AddTransient<MainViewModel>();
-
+            services.AddTransient<ContactEditViewModel>();
             services.AddTransient<MainWindow>();
+            services.AddTransient<ContactEditWindow>();
 
             ServiceProvider = services.BuildServiceProvider();
 

@@ -13,6 +13,7 @@ namespace PhoneBookDB.Models
         private string _name = string.Empty;
         private string _phone = string.Empty;
 
+        public Contact() { }
         public Contact(string name, string phone)
         {
             _name = name;
@@ -32,6 +33,28 @@ namespace PhoneBookDB.Models
         {
             get => _phone;
             set => Set(ref _phone, value);
+        }
+        public static string NormalizePhone(string phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+                return string.Empty;
+
+            var digits = new string(phone.Where(char.IsDigit).ToArray());
+
+            if (digits.Length == 11 && digits.StartsWith("8"))
+                digits = "7" + digits.Substring(1);
+
+            if (digits.Length == 10)
+                digits = "7" + digits;
+
+            if (digits.Length == 11 && !digits.StartsWith("7"))
+                digits = "+" + digits;
+
+            if (digits.Length == 11 && digits.StartsWith("7"))
+            {
+                return $"+7 ({digits.Substring(1, 3)}) {digits.Substring(4, 3)}-{digits.Substring(7, 2)}-{digits.Substring(9, 2)}";
+            }
+            return phone;
         }
 
         public bool Validate()

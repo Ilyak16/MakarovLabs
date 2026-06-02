@@ -22,5 +22,12 @@ namespace PhoneBookDB
             InitializeComponent();
             DataContext = viewModel;
         }
+        private void DataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is MainViewModel vm && vm.SelectedContact != null)
+            {
+                vm.EditCommand.Execute(null);
+            }
+        }
     }
 }

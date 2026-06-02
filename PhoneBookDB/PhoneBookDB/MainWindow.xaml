@@ -1,49 +1,37 @@
 ﻿<Window x:Class="PhoneBookDB.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:PhoneBookDB"
-        mc:Ignorable="d"
-        Title="Телефонная книга" Height="450" Width="600">
+        Title="Телефонная книга" Height="450" Width="650">
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Имя -->
-        <StackPanel Grid.Row="0" Orientation="Vertical">
-            <Label HorizontalAlignment="Center" VerticalAlignment="Bottom">Имя</Label>
-            <TextBox  Margin="0,5"
-                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" 
-                     />
-        </StackPanel>
-        <!-- Телефон -->
-        <StackPanel Grid.Row="1" Orientation="Vertical">
-            <Label HorizontalAlignment="Center" VerticalAlignment="Bottom">Номер телефона</Label>
-            <TextBox  Margin="0,5"
-                     Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}"/>
-        </StackPanel>
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10">
-            <Button Content="Добавить" Width="100" Margin="0,0,10,0"
+        <!-- Кнопки -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="Добавить" Width="110" Margin="0,0,5,0"
                     Command="{Binding AddCommand}"/>
-
-            <Button Content="Удалить" Width="100"
+            <Button Content="✏Изменить" Width="110" Margin="0,0,5,0"
+                    Command="{Binding EditCommand}"/>
+            <Button Content="Удалить" Width="110" Margin="0,0,5,0"
                     Command="{Binding DeleteCommand}"/>
+            <Button Content="Обновить" Width="110" Margin="0,0,5,0"
+                    Command="{Binding RefreshCommand}"/>
+            <Button Content="Форматировать все" Width="160"
+                    Command="{Binding NormalizeAllCommand}"/>
         </StackPanel>
 
-        <DataGrid Grid.Row="3"
+        <!-- Список контактов -->
+        <DataGrid Grid.Row="1"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   ItemsSource="{Binding Contacts}"
                   SelectedItem="{Binding SelectedContact}">
-
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Имя" Binding="{Binding Name}"/>
-                <DataGridTextColumn Header="Телефон" Binding="{Binding Phone}"/>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="*"/>
+                <DataGridTextColumn Header="Телефон" Binding="{Binding Phone}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
