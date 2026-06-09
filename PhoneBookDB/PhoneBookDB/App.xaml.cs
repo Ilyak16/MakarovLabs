@@ -20,7 +20,7 @@ namespace PhoneBookDB
             var services = new ServiceCollection();
 
             
-            services.AddDbContext<PhoneBookDbKupriyanov2307a1Context>(options =>
+            services.AddDbContextFactory<PhoneBookDbKupriyanov2307a1Context>(options =>
                 options.UseSqlServer("Data Source=DBSrv\\gor2025;Initial Catalog=PhoneBookDB_Kupriyanov_2307a1;Integrated Security=True;Encrypt=True;Trust Server Certificate=True"));
 
             services.AddTransient<MainViewModel>();

@@ -12,7 +12,7 @@ namespace PhoneBookDB.ViewModels
 {
     public class MainViewModel : ObservableObject
     {
-        private readonly PhoneBookDbKupriyanov2307a1Context _context;
+        private readonly IDbContextFactory<PhoneBookDbKupriyanov2307a1Context> _contextFactory;
         public ObservableCollection<Contact> Contacts { get; set; }
 
         private Contact? _selectedContact;
@@ -28,9 +28,9 @@ namespace PhoneBookDB.ViewModels
         public ICommand RefreshCommand { get; }
         public ICommand NormalizeAllCommand { get; }
 
-        public MainViewModel(PhoneBookDbKupriyanov2307a1Context context)
+        public MainViewModel(IDbContextFactory<PhoneBookDbKupriyanov2307a1Context> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
             Contacts = new ObservableCollection<Contact>();
 
             AddCommand = new RelayCommand(OpenAddContactWindow, () => true);
@@ -42,29 +42,34 @@ namespace PhoneBookDB.ViewModels
             Task.Run(async () => await LoadContactsAsync());
         }
 
+        // Чтение из БД с использованием локального контекста
         private async Task LoadContactsAsync()
         {
             try
             {
-                var contacts = await _context.Contacts.ToListAsync();
-
-                Application.Current.Dispatcher.Invoke(() =>
+                using (var context = await _contextFactory.CreateDbContextAsync())
                 {
-                    Contacts.Clear();
-                    foreach (var contact in contacts)
-                        Contacts.Add(contact);
-                });
+                    // Ас NoTracking использовать не обязательно, так как контекст сразу уничтожается, 
+                    // но это увеличивает производительность чтения.
+                    var contacts = await context.Contacts.AsNoTracking().ToListAsync();
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Contacts.Clear();
+                        foreach (var contact in contacts)
+                            Contacts.Add(contact);
+                    });
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ Ошибка загрузки: {ex.Message}", "Ошибка",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"❌ Ошибка загрузки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void OpenAddContactWindow()
         {
-            var viewModel = new ContactEditViewModel(_context, onContactSaved: RefreshContacts);
+            var viewModel = new ContactEditViewModel(_contextFactory, onContactSaved: RefreshContacts);
             var window = new ContactEditWindow(viewModel);
             window.ShowDialog();
         }
@@ -73,22 +78,20 @@ namespace PhoneBookDB.ViewModels
         {
             if (SelectedContact == null)
             {
-                MessageBox.Show("Выберите контакт для редактирования", "Внимание",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите контакт для редактирования", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
-            var viewModel = new ContactEditViewModel(_context, SelectedContact, RefreshContacts);
+            var viewModel = new ContactEditViewModel(_contextFactory, SelectedContact, RefreshContacts);
             var window = new ContactEditWindow(viewModel);
             window.ShowDialog();
         }
 
+        // Удаление сущности в новом контексте по первичному ключу ID
         private async void DeleteContact()
         {
             if (SelectedContact == null)
             {
-                MessageBox.Show("Выберите контакт для удаления", "Внимание",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Выберите контакт для удаления", "Внимание", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -102,65 +105,68 @@ namespace PhoneBookDB.ViewModels
 
             try
             {
-                var contactToDelete = SelectedContact;
+                int idToDelete = SelectedContact.Id;
 
-                _context.Contacts.Remove(contactToDelete);
-                await _context.SaveChangesAsync();
+                using (var context = await _contextFactory.CreateDbContextAsync())
+                {
+                    var contactToDelete = await context.Contacts.FindAsync(idToDelete);
+                    if (contactToDelete != null)
+                    {
+                        context.Contacts.Remove(contactToDelete);
+                        await context.SaveChangesAsync();
+                    }
+                }
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Contacts.Remove(contactToDelete);
+                    var item = Contacts.FirstOrDefault(c => c.Id == idToDelete);
+                    if (item != null) Contacts.Remove(item);
                     SelectedContact = null;
                 });
 
-                MessageBox.Show("✅ Контакт удалён!", "Успех",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("✅ Контакт удалён!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ Ошибка удаления: {ex.Message}",
-                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"❌ Ошибка удаления: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        /// <summary>
-        /// Нормализует все телефоны в базе данных до единого формата
-        /// </summary>
+        // Нормализация всех записей через локальный контекст
         private async Task NormalizeAllPhonesAsync()
         {
             try
             {
-                var contacts = await _context.Contacts.ToListAsync();
-                int updated = 0;
-
-                foreach (var contact in contacts)
+                using (var context = await _contextFactory.CreateDbContextAsync())
                 {
-                    string normalized = Contact.NormalizePhone(contact.Phone);
+                    var contacts = await context.Contacts.ToListAsync();
+                    int updated = 0;
 
-                    if (contact.Phone != normalized)
+                    foreach (var contact in contacts)
                     {
-                        contact.Phone = normalized;
-                        updated++;
+                        string normalized = Contact.NormalizePhone(contact.Phone);
+                        if (contact.Phone != normalized)
+                        {
+                            contact.Phone = normalized;
+                            updated++;
+                        }
                     }
-                }
 
-                if (updated > 0)
-                {
-                    await _context.SaveChangesAsync();
-                    MessageBox.Show($"✅ Обновлено номеров: {updated}", "Нормализация",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                    await LoadContactsAsync();
-                }
-                else
-                {
-                    MessageBox.Show("️ Все номера уже в едином формате", "Нормализация",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    if (updated > 0)
+                    {
+                        await context.SaveChangesAsync();
+                        MessageBox.Show($"✅ Обновлено номеров: {updated}", "Нормализация", MessageBoxButton.OK, MessageBoxImage.Information);
+                        await LoadContactsAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Все номера уже в едином формате", "Нормализация", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"❌ Ошибка: {ex.Message}", "Ошибка",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"❌ Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
